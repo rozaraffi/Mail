@@ -1,0 +1,1553 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manajemen Akun Email - v4.6 (Fitur Lengkap)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"> 
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        /* ==================== */
+        /* === STYLING CSS === */
+        /* ==================== */
+        :root {
+            --primary-color: #4c7ad3; 
+            --primary-hover: #3a68c0;
+            /* Warna Status */
+            --status-aktif: #28a745;    /* Hijau */
+            --status-nonaktif: #ffc107; /* Kuning/Oranye */
+            --status-dinonaktifkan: #dc3545; /* Merah */
+            
+            --secondary-color: #6c757d;
+            --bg-color: #f4f7fa;
+            --card-bg: #ffffff;
+            --border-color: #e0e4e8;
+            --shadow: 0 8px 25px rgba(0, 0, 0, 0.05);
+            --radius: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            padding: 40px 20px;
+            color: #343a40;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+        }
+        
+        @media (min-width: 768px) {
+            .container {
+                grid-template-columns: 1fr 2fr;
+            }
+        }
+
+        .header h1 {
+            font-weight: 800;
+            color: var(--primary-color);
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            color: var(--secondary-color);
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 30px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .card-header {
+            font-weight: 700;
+            font-size: 1.5em;
+            margin-bottom: 25px;
+            color: #212529;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* --- Global Actions (Tombol Export/Import/PDF) --- */
+        .global-actions {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        .action-button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .export-btn { background-color: var(--status-aktif); }
+        .export-btn:hover { background-color: #1e7e34; }
+        .import-btn { background-color: var(--secondary-color); }
+        .import-btn:hover { background-color: #5a6268; }
+        .pdf-btn { background-color: var(--status-dinonaktifkan); }
+        .pdf-btn:hover { background-color: #c82333; }
+        
+        .import-container {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+        
+        .import-container input[type="file"] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+        /* ------------------------------------------------ */
+
+        /* --- Form Controls & Inputs --- */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+            font-size: 0.95em;
+        }
+        
+        /* New group for password input + generator button */
+        .password-input-group {
+            display: flex;
+            gap: 10px;
+            align-items: stretch; /* Ubah ke stretch agar elemen penuh */
+        }
+        
+        /* Tambahan untuk Kontainer Input Kata Sandi dengan Ikon */
+        .password-input-with-actions {
+            position: relative;
+            display: flex;
+            align-items: center;
+            border: 1px solid var(--border-color); /* Pindahkan border ke kontainer */
+            border-radius: 8px;
+            transition: border-color 0.3s, box-shadow 0.3s;
+            flex-grow: 1; /* Penting: agar mengambil sisa ruang */
+        }
+
+        .password-input-with-actions:focus-within {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(76, 122, 211, 0.15);
+        }
+
+        /* Input asli di dalam kontainer */
+        .password-input-with-actions input[type="password"],
+        .password-input-with-actions input[type="text"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: none; /* Hapus border asli dari input */
+            padding-right: 90px; /* Ruang untuk 2 ikon */
+            border-radius: 8px; /* Tambahkan radius lagi pada input */
+            font-size: 16px;
+            transition: none; /* Hilangkan transisi fokus ganda */
+        }
+
+        /* Tombol Ikon Mata dan Copy */
+        .password-icon-btn {
+            position: absolute;
+            right: 0;
+            top: 0;
+            height: 100%;
+            width: 45px;
+            background: none;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            font-size: 16px;
+            transition: color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .password-icon-btn:hover {
+            color: var(--primary-color);
+        }
+
+        /* Penempatan khusus untuk tombol copy */
+        .password-input-with-actions .copy-btn {
+            right: 45px; /* Bergeser ke kiri agar tidak menimpa tombol mata */
+            border-left: 1px solid var(--border-color);
+        }
+        /* ------------------------------------------------------------- */
+        
+        /* Styling umum untuk semua input */
+        input[type="email"], input[type="text"], textarea, select, .app-input-container input, .modal-content input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        
+        input:focus, textarea:focus, select:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(76, 122, 211, 0.15);
+        }
+        
+        /* Hapus styling fokus untuk input di dalam password-input-with-actions 
+           karena fokus sudah ditangani oleh container */
+        .password-input-with-actions input:focus {
+            border-color: transparent;
+            box-shadow: none;
+        }
+        
+        textarea {
+            resize: vertical;
+        }
+
+        /* Kekuatan Kata Sandi Styling */
+        .password-strength {
+            margin-top: 5px;
+            height: 10px;
+            background: #eee;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .password-bar {
+            height: 100%;
+            width: 0;
+            transition: width 0.3s, background-color 0.3s;
+        }
+        .text-strength {
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-top: 5px;
+            text-align: right;
+            min-height: 15px; 
+        }
+        
+        .strength-lemah { background-color: var(--status-dinonaktifkan); }
+        .strength-sedang { background-color: var(--status-nonaktif); }
+        .strength-kuat { background-color: var(--status-aktif); }
+        .strength-sangatkuat { background-color: var(--primary-color); }
+        .text-lemah { color: var(--status-dinonaktifkan); }
+        .text-sedang { color: var(--status-nonaktif); }
+        .text-kuat { color: var(--status-aktif); }
+        .text-sangatkuat { color: var(--primary-color); }
+        
+        /* Input Aplikasi Baru */
+        .app-input-container {
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            background-color: #fcfcfc;
+        }
+
+        .remove-app-btn {
+            background-color: var(--status-dinonaktifkan);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 15px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.3s;
+            display: block;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .remove-app-btn:hover {
+             background-color: #c82333;
+        }
+
+        .add-app-btn {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.3s;
+            display: block;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .add-app-btn:hover {
+            background-color: #5a6268;
+        }
+
+        .submit-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 14px 25px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .submit-btn:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+        /* ------------------------------------------------ */
+        
+        /* Area Pencarian dan Pengurutan */
+        .filter-controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .filter-controls input[type="text"], .filter-controls select {
+            padding: 10px 15px;
+            width: auto;
+        }
+
+        /* --- Area Hasil / Koleksi Data --- */
+        #dataKoleksi {
+            list-style: none;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .email-item {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-left: 5px solid; /* Akan diisi JS */
+            border-radius: var(--radius);
+            padding: 15px 20px;
+            display: flex;
+            flex-direction: column;
+            transition: box-shadow 0.3s;
+        }
+        
+        .email-item:hover {
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+        }
+        
+        /* Status Border-Left Dinamis */
+        .email-item.status-Aktif { border-left-color: var(--status-aktif); }
+        .email-item.status-Nonaktif { border-left-color: var(--status-nonaktif); }
+        .email-item.status-Dinonaktifkan { border-left-color: var(--status-dinonaktifkan); }
+        
+        .item-main-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .email-info strong {
+            display: block;
+            font-size: 1.15em;
+            margin-bottom: 5px;
+            color: #212529;
+            font-weight: 700;
+            /* Flex untuk Email + Copy Button + Status Badge */
+            display: flex; 
+            align-items: center;
+            flex-wrap: wrap; 
+        }
+        
+        .app-list {
+            list-style: none;
+            padding: 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 5px;
+            width: 100%;
+        }
+        
+        .app-list li {
+            background-color: #e9ecef;
+            color: #495057;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: 600;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            border-left: 3px solid var(--primary-color); 
+        }
+        
+        .app-list li span:last-child {
+            font-size: 0.75em;
+            color: #6c757d;
+            font-weight: 400;
+            margin-top: 2px;
+        }
+        
+        /* Status Badge Styling */
+        .status-badge {
+            font-size: 0.75em;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 5px;
+            text-transform: uppercase;
+            margin-left: 10px;
+            line-height: 1;
+            /* Margin agar tidak terlalu dekat dengan tombol salin */
+            margin-right: 5px; 
+        }
+        .status-badge.status-Aktif { background-color: var(--status-aktif); color: white; }
+        .status-badge.status-Nonaktif { background-color: var(--status-nonaktif); color: #343a40; }
+        .status-badge.status-Dinonaktifkan { background-color: var(--status-dinonaktifkan); color: white; }
+        
+        .item-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .item-note {
+            width: 100%;
+            border-top: 1px dashed #eee;
+            padding-top: 10px;
+            font-size: 0.9em;
+            color: #777;
+        }
+        
+        .item-note strong {
+            font-weight: 700;
+            color: #495057;
+        }
+
+        .action-btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-size: 0.9em;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .edit-btn { background-color: #ffc107; color: #343a40; }
+        .edit-btn:hover { background-color: #e0a800; }
+
+        .delete-btn { background-color: #dc3545; }
+        .delete-btn:hover { background-color: #c82333; }
+        
+        /* Styling untuk tombol salin baru */
+        .action-btn.copy-btn {
+            background-color: var(--primary-color); 
+            color: white;
+            font-size: 0.9em;
+        }
+        .action-btn.copy-btn:hover {
+             background-color: var(--primary-hover);
+        }
+
+        /* Styling untuk tombol Generate */
+        .action-button.generate-btn {
+            background-color: var(--secondary-color);
+            padding: 8px 15px;
+            font-size: 0.95em;
+            /* Pastikan tombol generate tidak terpotong */
+            flex-shrink: 0; 
+        }
+        .action-button.generate-btn:hover {
+            background-color: #5a6268;
+        }
+
+        /* Modal Styling */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+            padding-top: 50px;
+        }
+
+        .modal-content {
+            background-color: var(--card-bg);
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            width: 90%;
+            max-width: 600px;
+            animation: fadeIn 0.3s;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+
+        .close-btn {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            transition: color 0.3s;
+        }
+
+        .close-btn:hover,
+        .close-btn:focus {
+            color: #343a40;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .btn-modal {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .btn-cancel { background-color: var(--secondary-color); color: white; }
+        .btn-cancel:hover { background-color: #5a6268; }
+
+        .btn-save { background-color: var(--primary-color); color: white; }
+        .btn-save:hover { background-color: var(--primary-hover); }
+
+        @keyframes fadeIn {
+            from {opacity: 0; transform: translateY(-20px);}
+            to {opacity: 1; transform: translateY(0);}
+        }
+        
+        /* === UI NOTIFIKASI KUSTOM === */
+        .modal-alert-content {
+            max-width: 400px;
+            text-align: center;
+            padding: 25px;
+        }
+
+        .modal-alert-content .modal-header {
+            border-bottom: none;
+            padding-bottom: 5px;
+            justify-content: center;
+        }
+
+        .modal-alert-content .close-btn {
+            display: none;
+        }
+        
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div>
+        <header class="header">
+            <h1>Manajemen Akun Email ✉️</h1>
+            <p>Kelola, kelompokkan, simpan (Export), dan muat kembali (Import) data akun Anda.</p>
+        </header>
+        
+        <div class="card">
+            <h2 class="card-header"><i class="fas fa-plus-circle"></i> Tambah Akun Baru</h2>
+            <form id="formInput">
+                
+                <div class="form-group">
+                    <label for="emailInput">Alamat Email</label>
+                    <input type="email" id="emailInput" placeholder="contoh@Gmail.com" required>
+                    <p id="emailError" style="color: var(--status-dinonaktifkan); font-size: 0.85em; margin-top: 5px; display: none;">Format email tidak valid.</p>
+                </div>
+                
+                <div class="form-group">
+                    <label for="passwordInput">Kata Sandi (Hanya untuk Cek Kekuatan - TIDAK DISIMPAN)</label>
+                    <div class="password-input-group">
+                        
+                        <div class="password-input-with-actions">
+                            <input type="password" id="passwordInput" placeholder="Masukkan kata sandi akun" onkeyup="checkPasswordStrength(this.value, 'passwordStrengthBar', 'passwordStrengthText')">
+                            <button type="button" class="password-icon-btn copy-btn" id="copyPasswordBtn" title="Salin Kata Sandi"><i class="fas fa-copy"></i></button>
+                            <button type="button" class="password-icon-btn" id="togglePasswordBtn" title="Tampilkan/Sembunyikan Kata Sandi"><i class="fas fa-eye-slash"></i></button>
+                        </div>
+                        <button type="button" class="action-button generate-btn" onclick="generateAndSetPassword('passwordInput', 'passwordStrengthBar', 'passwordStrengthText')">
+                            <i class="fas fa-lock"></i> Generate
+                        </button>
+                    </div>
+                    
+                    <div class="password-strength">
+                        <div id="passwordStrengthBar" class="password-bar"></div>
+                    </div>
+                    <div id="passwordStrengthText" class="text-strength"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="statusInput">Status Akun</label>
+                    <select id="statusInput" required>
+                        <option value="Aktif">Aktif</option>
+                        <option value="Nonaktif">Nonaktif</option>
+                        <option value="Dinonaktifkan">Dinonaktifkan</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="noteInput">Catatan Global Akun (Opsional)</label>
+                    <textarea id="noteInput" placeholder="Contoh: Akun Email Utama" rows="2"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Aplikasi dan Catatan Terkait</label>
+                    <div id="appInputs">
+                        </div>
+                    <button type="button" class="add-app-btn" onclick="tambahInputApp('appInputs')"><i class="fas fa-plus"></i> Tambah Aplikasi/Web Lain</button>
+                </div>
+                
+                <button type="submit" class="submit-btn">Simpan Akun</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2 class="card-header"><i class="fas fa-list-ul"></i> Koleksi Akun Email</h2>
+        
+        <div class="global-actions">
+            <button class="action-button export-btn" onclick="exportData()">
+                <i class="fas fa-download"></i> Export Data (JSON)
+            </button>
+            
+            <div class="import-container">
+                <button class="action-button import-btn">
+                    <i class="fas fa-upload"></i> Import Data (JSON)
+                </button>
+                <input type="file" id="importFile" accept=".json" onchange="importData(event)">
+            </div>
+            
+            <button class="action-button pdf-btn" onclick="exportPdf()">
+                <i class="fas fa-file-pdf"></i> Download PDF
+            </button>
+        </div>
+        
+        <div class="filter-controls">
+            <input type="text" id="searchInput" onkeyup="renderData()" placeholder="🔍 Cari Email, Aplikasi, atau Catatan...">
+            
+            <label for="filterStatusSelect" style="margin-bottom: 0;">Status:</label>
+            <select id="filterStatusSelect" onchange="renderData()">
+                <option value="">Semua Status</option>
+                <option value="Aktif">Aktif</option>
+                <option value="Nonaktif">Nonaktif</option>
+                <option value="Dinonaktifkan">Dinonaktifkan</option>
+            </select>
+
+            <label for="filterAppSelect" style="margin-bottom: 0;">Aplikasi:</label>
+            <select id="filterAppSelect" onchange="renderData()">
+                <option value="">Semua Aplikasi</option>
+                </select>
+
+            <label for="sortSelect" style="margin-bottom: 0;">Urutkan:</label>
+            <select id="sortSelect" onchange="renderData()">
+                <option value="id_desc">Terbaru (ID)</option>
+                <option value="email">Alamat Email (A-Z)</option>
+            </select>
+        </div>
+        
+        <p id="dataCount" style="margin-bottom: 15px; font-size: 0.9em; color: var(--primary-color);">Memuat data...</p>
+
+        <ul id="dataKoleksi"></ul>
+        <p id="emptyMessage" style="text-align: center; color: var(--secondary-color); padding: 20px;">Belum ada data yang dikumpulkan.</p>
+    </div>
+
+</div>
+
+<datalist id="existingAppsList"></datalist>
+
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i class="fas fa-edit"></i> Edit Akun</h2>
+            <span class="close-btn" onclick="tutupModal()">&times;</span>
+        </div>
+        
+        <form id="formEdit">
+            <input type="hidden" id="editId">
+            
+            <div class="form-group">
+                <label for="editEmail">Alamat Email</label>
+                <input type="email" id="editEmail" required>
+                <p id="editEmailError" style="color: var(--status-dinonaktifkan); font-size: 0.85em; margin-top: 5px; display: none;">Format email tidak valid.</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="editPassword">Kata Sandi Baru (Hanya untuk Cek Kekuatan - **Tidak Disimpan**)</label>
+                 <div class="password-input-group">
+                    
+                    <div class="password-input-with-actions">
+                        <input type="password" id="editPassword" placeholder="Masukkan kata sandi akun (opsional)" onkeyup="checkPasswordStrength(this.value, 'editPasswordStrengthBar', 'editPasswordStrengthText')">
+                        <button type="button" class="password-icon-btn copy-btn" id="editCopyPasswordBtn" title="Salin Kata Sandi"><i class="fas fa-copy"></i></button>
+                        <button type="button" class="password-icon-btn" id="editTogglePasswordBtn" title="Tampilkan/Sembunyikan Kata Sandi"><i class="fas fa-eye-slash"></i></button>
+                    </div>
+                    <button type="button" class="action-button generate-btn" onclick="generateAndSetPassword('editPassword', 'editPasswordStrengthBar', 'editPasswordStrengthText')">
+                        <i class="fas fa-lock"></i> Generate
+                    </button>
+                </div>
+                
+                <div class="password-strength">
+                    <div id="editPasswordStrengthBar" class="password-bar"></div>
+                </div>
+                <div id="editPasswordStrengthText" class="text-strength"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="editStatus">Status Akun</label>
+                <select id="editStatus" required>
+                    <option value="Aktif">Aktif</option>
+                    <option value="Nonaktif">Nonaktif</option>
+                    <option value="Dinonaktifkan">Dinonaktifkan</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="editNote">Catatan Global Akun</label>
+                <textarea id="editNote" rows="2" placeholder="Contoh: Digunakan untuk pendaftaran newsletter"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Aplikasi dan Catatan Terkait</label>
+                <div id="editAppInputs"></div>
+                <button type="button" class="add-app-btn" onclick="tambahInputApp('editAppInputs')"><i class="fas fa-plus"></i> Tambah Aplikasi/Web Lain</button>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn-modal btn-cancel" onclick="tutupModal()">Batal</button>
+                <button type="submit" class="btn-modal btn-save">Simpan Perubahan</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="customNotification" class="modal">
+    <div class="modal-content modal-alert-content">
+        <div class="modal-header">
+            <h2 id="notificationTitle">Pemberitahuan</h2>
+            <span class="close-btn" onclick="tutupNotifikasi()">&times;</span>
+        </div>
+        <p id="notificationMessage" style="margin-bottom: 20px; font-size: 1.1em;"></p>
+        <div class="modal-actions" style="justify-content: center;">
+            <button type="button" class="btn-modal btn-save" onclick="tutupNotifikasi()">OK</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ========================
+    // === JAVASCRIPT LOGIC ===
+    // ========================
+
+    const { jsPDF } = window.jspdf;
+    
+    const formInput = document.getElementById('formInput');
+    const appInputsContainer = document.getElementById('appInputs');
+    const dataKoleksi = document.getElementById('dataKoleksi');
+    const emptyMessage = document.getElementById('emptyMessage');
+    const editModal = document.getElementById('editModal');
+    const formEdit = document.getElementById('formEdit');
+    const editAppInputsContainer = document.getElementById('editAppInputs');
+    const emailError = document.getElementById('emailError');
+    const editEmailError = document.getElementById('editEmailError');
+    const searchInput = document.getElementById('searchInput');
+    const sortSelect = document.getElementById('sortSelect');
+    const filterStatusSelect = document.getElementById('filterStatusSelect'); 
+    const filterAppSelect = document.getElementById('filterAppSelect');       
+    const dataCount = document.getElementById('dataCount');                    
+    const existingAppsList = document.getElementById('existingAppsList'); 
+    
+    // VARIABEL NOTIFIKASI KUSTOM
+    const customNotification = document.getElementById('customNotification');
+    const notificationTitle = document.getElementById('notificationTitle');
+    const notificationMessage = document.getElementById('notificationMessage');
+    
+    // Tambahkan definisi untuk elemen tombol kata sandi baru
+    const copyPasswordBtn = document.getElementById('copyPasswordBtn');
+    const togglePasswordBtn = document.getElementById('togglePasswordBtn');
+    const editCopyPasswordBtn = document.getElementById('editCopyPasswordBtn');
+    const editTogglePasswordBtn = document.getElementById('editTogglePasswordBtn');
+    
+    // --- FUNGSI KEAMANAN: ENKRIPSI & DEKRIPSI (Base64) ---
+    function encodeData(data) {
+        return btoa(JSON.stringify(data));
+    }
+
+    function decodeData(encodedString) {
+        try {
+            if (!encodedString) return [];
+            const decodedString = atob(encodedString);
+            return JSON.parse(decodedString);
+        } catch (e) {
+            console.error("Gagal mendekode/parse data:", e);
+            return [];
+        }
+    }
+    
+    // Muat data dengan dekripsi
+    let emailData = decodeData(localStorage.getItem('emailDataSecure'));
+    
+    // Regex Sederhana untuk Validasi Email (Fitur UX)
+    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    // ===============================================
+    // === FITUR 1: GENERATOR KATA SANDI SIMPEL & SETER (DIPERBARUI) ===
+    // ===============================================
+
+    // FUNGSI BARU: MENGHASILKAN PASSWORD SIMPEL DENGAN ATURAN KONSONAN
+    function generateSimplePassword() {
+        // 1. Karakter Set
+        const VOWELS = "aeiou"; // 5
+        const CONSONANTS = "bcdfghjklmnpqrstvwxyz"; // 21
+        const NUMBERS = "0123456789"; // 10
+        const SYMBOLS = ",.!@$#"; // Menggunakan koma (,) sebagai wajib
+
+        const MAX_LENGTH = 10;
+        
+        let password = "";
+        
+        // Pastikan password memiliki minimal satu Huruf Besar, satu Angka, dan satu Koma
+        const requiredChars = [
+            CONSONANTS.toUpperCase().charAt(Math.floor(Math.random() * CONSONANTS.length)), // Huruf Besar (Konsonan)
+            NUMBERS.charAt(Math.floor(Math.random() * NUMBERS.length)), // Angka
+            ",", // Koma (Simbol Wajib)
+        ];
+
+        let remainingLength = MAX_LENGTH;
+        
+        // 2. Membangun Bagian Utama (Pola Konsonan Wajib)
+        let lastCharType = ""; // 'V', 'C', atau 'F'
+
+        while (password.length < remainingLength) {
+            let nextChar = "";
+            let charType = "";
+            
+            // Aturan: Setiap 2 huruf, wajib ada konsonan. (Memaksa pola Konsonan-Vowel atau Konsonan-Konsonan)
+            // Jika panjang saat ini genap (posisi 0, 2, 4...) atau karakter terakhir adalah Vowel, masukkan Konsonan
+            if (password.length % 2 === 0 || lastCharType === 'V') {
+                 // Konsonan (C)
+                 nextChar = CONSONANTS.charAt(Math.floor(Math.random() * CONSONANTS.length));
+                 charType = 'C';
+            } else {
+                 // Vowel (V) atau Konsonan (C) - 50% chance
+                 if (Math.random() < 0.5) {
+                     nextChar = VOWELS.charAt(Math.floor(Math.random() * VOWELS.length));
+                     charType = 'V';
+                 } else {
+                     nextChar = CONSONANTS.charAt(Math.floor(Math.random() * CONSONANTS.length));
+                     charType = 'C';
+                 }
+            }
+            
+            // Randomly capitalize the consonant to ensure variety
+            if (Math.random() < 0.2 && charType === 'C' && password.length < 7) { 
+                 nextChar = nextChar.toUpperCase();
+            }
+
+            // Randomly insert numbers/symbols as filler (terutama di posisi yang cenderung angka/simbol)
+            if (password.length === 3 || password.length === 6) {
+                 const randomFiller = NUMBERS + SYMBOLS.replace(',', ''); // Koma wajib dimasukkan belakangan
+                 nextChar = randomFiller.charAt(Math.floor(Math.random() * randomFiller.length));
+                 charType = 'F'; // Filler
+            }
+            
+            // Hindari duplikasi karakter berturut-turut yang sama (kecuali angka/simbol)
+            if (password.length > 0 && nextChar.toLowerCase() === password.slice(-1).toLowerCase() && charType !== 'F') {
+                continue;
+            }
+
+            password += nextChar;
+            lastCharType = charType;
+        }
+        
+        // 3. Memastikan Karakter Wajib (Shuffle dan potong ke MAX_LENGTH)
+        // Gabungkan password yang sudah dibuat dengan requiredChars.
+        let finalChars = (password.substring(0, MAX_LENGTH - requiredChars.length) + requiredChars.join(''));
+
+        // Fisher-Yates (Knuth) Shuffle untuk mencampur karakter wajib ke posisi acak
+        const arr = finalChars.split('');
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        
+        // Potong lagi untuk memastikan maksimal 10 karakter
+        let finalPassword = arr.join('').substring(0, MAX_LENGTH);
+
+
+        // FINAL CHECK: Pastikan Koma (,) ada, jika tidak, ganti karakter terakhir
+        if (!finalPassword.includes(',')) {
+            // Ganti karakter di posisi akhir atau acak dengan koma
+            finalPassword = finalPassword.slice(0, MAX_LENGTH - 1) + ',';
+        }
+        
+        return finalPassword;
+    }
+
+
+    // Fungsi ini diganti untuk memanggil generateSimplePassword
+    function generateAndSetPassword(inputId, barId, textId) {
+        const input = document.getElementById(inputId);
+        // Panggil fungsi generateSimplePassword yang baru
+        const newPassword = generateSimplePassword(); 
+        input.value = newPassword;
+        checkPasswordStrength(newPassword, barId, textId);
+        tampilkanNotifikasi("Kata Sandi Dibuat!", "Kata sandi simpel yang kuat berhasil dibuat dan diisi. JANGAN LUPA MENYALINNYA!");
+    }
+    
+    // --- FUNGSI VALIDASI KEKUATAN KATA SANDI (Perbaikan: Reset Bar) ---
+    function checkPasswordStrength(password, barId, textId) {
+        const bar = document.getElementById(barId);
+        const text = document.getElementById(textId);
+
+        let strength = 0;
+        let classification = 'Sangat Lemah';
+        let cssClass = 'text-lemah';
+
+        if (password.length > 5) strength += 1;
+        if (password.length > 8) strength += 1;
+        if (password.match(/[a-z]/) && password.match(/[A-Z]/)) strength += 1;
+        if (password.match(/\d/)) strength += 1;
+        if (password.match(/[^a-zA-Z\d\s:]/)) strength += 1;
+
+        if (password.length === 0) {
+            bar.style.width = '0%';
+            text.textContent = '';
+            bar.className = 'password-bar';
+            text.className = 'text-strength'; 
+            return;
+        }
+
+        // Set klasifikasi dan lebar bar
+        let width = 0;
+        switch(strength) {
+            case 1:
+                classification = 'Lemah'; width = 25; cssClass = 'text-lemah strength-lemah'; break;
+            case 2:
+                classification = 'Sedang'; width = 50; cssClass = 'text-sedang strength-sedang'; break;
+            case 3:
+                classification = 'Kuat'; width = 75; cssClass = 'text-kuat strength-kuat'; break;
+            case 4:
+            case 5:
+                classification = 'Sangat Kuat'; width = 100; cssClass = 'text-sangatkuat strength-sangatkuat'; break;
+            default:
+                classification = 'Sangat Lemah'; width = 10; cssClass = 'text-lemah strength-lemah'; break;
+        }
+
+        bar.style.width = `${width}%`;
+        text.textContent = classification;
+        bar.className = 'password-bar ' + cssClass.split(' ')[1]; 
+        text.className = 'text-strength ' + cssClass.split(' ')[0]; 
+    }
+    
+    // --- FUNGSI UTILITY: MENYIMPAN KE LOCALSTORAGE (Menggunakan Enkripsi) ---
+    function simpanKeLocalStorage() {
+        localStorage.setItem('emailDataSecure', encodeData(emailData));
+    }
+
+    // --- FUNGSI VALIDASI EMAIL ---
+    function validateEmail(email, errorElement) {
+        if (!EMAIL_REGEX.test(email)) {
+            errorElement.style.display = 'block';
+            return false;
+        }
+        errorElement.style.display = 'none';
+        return true;
+    }
+    
+    // --- FUNGSI NOTIFIKASI KUSTOM ---
+    function tampilkanNotifikasi(title, message) {
+        notificationTitle.textContent = title;
+        notificationMessage.innerHTML = message;
+        customNotification.style.display = 'block';
+    }
+
+    function tutupNotifikasi() {
+        customNotification.style.display = 'none';
+    }
+    
+    // ==================================================
+    // === FITUR TOGGLE MATA & COPY ===
+    // ==================================================
+
+    function copyToClipboard(text, successMessage) {
+        if (!navigator.clipboard) {
+            // Fallback for older browsers
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed'; // Agar tidak mengganggu scroll
+            textarea.style.opacity = 0;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                tampilkanNotifikasi("Berhasil Salin", successMessage);
+            } catch (err) {
+                tampilkanNotifikasi("Gagal Salin", "Gagal menyalin. Browser Anda mungkin tidak mendukung fitur ini.");
+            }
+            document.body.removeChild(textarea);
+            return;
+        }
+        navigator.clipboard.writeText(text).then(() => {
+            tampilkanNotifikasi("Berhasil Salin", successMessage);
+        }).catch(err => {
+            tampilkanNotifikasi("Gagal Salin", "Gagal menyalin ke clipboard.");
+            console.error('Could not copy text: ', err);
+        });
+    }
+
+    function setupPasswordFeatures(inputId, toggleBtnId, copyBtnId) {
+        const input = document.getElementById(inputId);
+        const toggleBtn = document.getElementById(toggleBtnId);
+        const copyBtn = document.getElementById(copyBtnId);
+
+        if (!input || !toggleBtn || !copyBtn) return; // Guard clause
+
+        // 1. Toggle Visibilitas Kata Sandi
+        toggleBtn.addEventListener('click', function() {
+            const isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+            
+            // Ganti ikon mata
+            const icon = toggleBtn.querySelector('i');
+            icon.classList.toggle('fa-eye-slash', !isPassword);
+            icon.classList.toggle('fa-eye', isPassword);
+            toggleBtn.title = isPassword ? 'Sembunyikan Kata Sandi' : 'Tampilkan Kata Sandi';
+        });
+
+        // 2. Tombol Copy Kata Sandi
+        copyBtn.addEventListener('click', function() {
+            if (input.value) {
+                copyToClipboard(input.value, "Kata sandi berhasil disalin dari input!");
+            } else {
+                tampilkanNotifikasi("Perhatian", "Input kata sandi kosong. Harap isi atau *generate* terlebih dahulu.");
+            }
+        });
+    }
+    
+    // --- FUNGSI EXPORT DATA (PDF menggunakan jsPDF-autoTable) ---
+    function exportPdf() {
+        if (emailData.length === 0) {
+            tampilkanNotifikasi("Gagal Export", "Tidak ada data yang tersedia untuk diexport ke PDF.");
+            return;
+        }
+        
+        const doc = new jsPDF('p', 'mm', 'a4'); 
+        
+        doc.setFontSize(18);
+        doc.text("Laporan Koleksi Akun Email", 105, 20, null, null, "center");
+        doc.setFontSize(10);
+
+        const head = [['Alamat Email', 'Status', 'Aplikasi', 'Catatan Aplikasi', 'Catatan Global']];
+        
+        const body = emailData.map(item => [
+            item.email,
+            item.status,
+            item.aplikasi.map(a => a.nama).join(', '),
+            item.aplikasi.map(a => `${a.nama}: ${a.catatan || '-'}`).join('\n'), 
+            item.catatan || '-' 
+        ]);
+
+        doc.autoTable({
+            head: head,
+            body: body,
+            startY: 35,
+            theme: 'striped',
+            headStyles: { 
+                fillColor: [76, 122, 211], 
+                textColor: 255, 
+                fontStyle: 'bold'
+            },
+            styles: { 
+                fontSize: 8, 
+                cellPadding: 2 
+            },
+            columnStyles: { 
+                0: { cellWidth: 40 }, 
+                1: { cellWidth: 15 }, 
+                2: { cellWidth: 40 }, 
+                3: { cellWidth: 50 }, 
+                4: { cellWidth: 40 }
+            }
+        });
+        
+        doc.save(`email_data_laporan_${new Date().toISOString().slice(0, 10)}.pdf`);
+        tampilkanNotifikasi("PDF Berhasil!", "Laporan PDF berhasil diunduh!");
+    }
+    
+    // --- FUNGSI VALIDASI UNIK NAMA APLIKASI ---
+    function validateUniqueApps(containerId) {
+        const appContainers = document.querySelectorAll(`#${containerId} > .app-input-container`);
+        const appNames = [];
+
+        appContainers.forEach(container => {
+            const nameInput = container.querySelector('.app-name-input');
+            const appName = nameInput ? nameInput.value.trim().toLowerCase() : '';
+            if (appName) {
+                appNames.push(appName);
+            }
+        });
+        
+        const uniqueApps = new Set(appNames);
+        
+        if (appNames.length !== uniqueApps.size) {
+            tampilkanNotifikasi("Perhatian Validasi!", "Terdapat **nama aplikasi yang duplikat** di daftar Aplikasi/Web Terkait. Mohon hapus duplikasi.");
+            return false;
+        }
+        return true;
+    }
+
+    // --- FUNGSI MENGUMPULKAN DATA DARI FORM TAMBAH ---
+    formInput.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const email = document.getElementById('emailInput').value.trim();
+        const catatanGlobal = document.getElementById('noteInput').value.trim();
+        const status = document.getElementById('statusInput').value;
+
+        if (!validateEmail(email, emailError)) return;
+        
+        if (!validateUniqueApps('appInputs')) return;
+
+        const aplikasi = getAppValues('appInputs'); 
+        
+        if (aplikasi.length === 0) {
+            tampilkanNotifikasi("Perhatian!", "Mohon isi minimal satu Aplikasi/Web terkait.");
+            return;
+        }
+
+        const isDuplicate = emailData.some(item => item.email.toLowerCase() === email.toLowerCase());
+        if (isDuplicate) {
+            tampilkanNotifikasi("Duplikasi Data", `Email "<strong>${email}</strong>" sudah ada dalam daftar.`);
+            return;
+        }
+
+        const newData = {
+            id: Date.now(),
+            email: email,
+            status: status,
+            aplikasi: aplikasi,
+            catatan: catatanGlobal 
+        };
+
+        emailData.push(newData);
+        simpanKeLocalStorage();
+        renderData(); 
+
+        // Reset Form dan Strength Meter
+        formInput.reset();
+        document.getElementById('statusInput').value = 'Aktif';
+        appInputsContainer.innerHTML = '';
+        tambahInputApp('appInputs'); 
+        checkPasswordStrength('', 'passwordStrengthBar', 'passwordStrengthText'); 
+        tampilkanNotifikasi("Berhasil Ditambahkan", "Akun email berhasil ditambahkan ke koleksi.");
+    });
+
+
+    // =================================================================
+    // === FITUR 3: MENGISI OPSI FILTER & DATALIST APLIKASI + COUNT ===
+    // =================================================================
+    function populateAppControls() {
+        const currentFilterValue = filterAppSelect.value;
+        
+        // Menghitung frekuensi aplikasi
+        const appCounts = {};
+        emailData.forEach(item => {
+            item.aplikasi.forEach(app => {
+                const appName = app.nama;
+                appCounts[appName] = (appCounts[appName] || 0) + 1;
+            });
+        });
+        
+        const uniqueAppNames = Object.keys(appCounts); 
+
+        // 1. Update Filter Aplikasi
+        filterAppSelect.innerHTML = '<option value="">Semua Aplikasi</option>';
+        Array.from(uniqueAppNames).sort().forEach(appName => {
+            const count = appCounts[appName];
+            const option = document.createElement('option');
+            option.value = appName;
+            // Menambahkan hitungan ke teks opsi
+            option.textContent = `${appName} (${count} Akun)`;
+            filterAppSelect.appendChild(option);
+        });
+        filterAppSelect.value = currentFilterValue;
+        
+        // 2. Update Datalist (Autofill)
+        existingAppsList.innerHTML = '';
+        Array.from(uniqueAppNames).sort().forEach(appName => {
+            const option = document.createElement('option');
+            option.value = appName;
+            existingAppsList.appendChild(option);
+        });
+    }
+
+
+    // --- FUNGSI SORTING, FILTERING, DAN RENDERING DATA ---
+    function renderData() {
+        populateAppControls(); 
+        
+        let filteredData = [...emailData]; 
+
+        // 1. FILTERING
+        const searchTerm = searchInput.value.toLowerCase().trim();
+        const filterStatus = filterStatusSelect.value;
+        const filterApp = filterAppSelect.value;
+
+        if (searchTerm) {
+            filteredData = filteredData.filter(item => 
+                item.email.toLowerCase().includes(searchTerm) ||
+                item.catatan.toLowerCase().includes(searchTerm) || 
+                item.aplikasi.some(app => 
+                    app.nama.toLowerCase().includes(searchTerm) || 
+                    (app.catatan && app.catatan.toLowerCase().includes(searchTerm)) 
+                )
+            );
+        }
+        
+        if (filterStatus) {
+            filteredData = filteredData.filter(item => item.status === filterStatus);
+        }
+
+        if (filterApp) {
+             filteredData = filteredData.filter(item => 
+                item.aplikasi.some(app => app.nama === filterApp)
+            );
+        }
+
+        // 2. SORTING 
+        const sortValue = sortSelect.value;
+        if (sortValue === 'email') {
+            filteredData.sort((a, b) => a.email.localeCompare(b.email));
+        } else if (sortValue === 'id_desc') {
+            filteredData.sort((a, b) => b.id - a.id); 
+        }
+
+        // 3. HITUNGAN DATA
+        dataCount.textContent = `Menampilkan ${filteredData.length} dari ${emailData.length} Akun`;
+
+
+        dataKoleksi.innerHTML = '';
+
+        if (filteredData.length === 0) {
+            emptyMessage.style.display = 'block';
+            return;
+        }
+
+        emptyMessage.style.display = 'none';
+        
+        filteredData.forEach(item => {
+            const listItem = document.createElement('li');
+            
+            // Warna Status pada Batas Kiri
+            listItem.classList.add('email-item', `status-${item.status.replace(/\s/g, '')}`);
+            
+            const statusBadge = `<span class="status-badge status-${item.status.replace(/\s/g, '')}">${item.status}</span>`;
+            
+            // FITUR 2: Tombol Copy/Salin
+            // Menggunakan fungsi copyToClipboard dengan escaping quote
+            const emailEscaped = item.email.replace(/'/g, "\\'");
+            const successMsg = `Email &quot;${item.email.replace(/'/g, "&quot;")}&quot; berhasil disalin!`;
+            const copyButton = `<button title="Salin Email" class="action-btn copy-btn" style="padding: 5px 8px; margin-left: 10px; font-size: 0.8em;" onclick="copyToClipboard('${emailEscaped}', '${successMsg}')"><i class="fas fa-copy"></i></button>`;
+
+
+            // Render list aplikasi dengan catatan
+            const appTags = item.aplikasi.map(app => `
+                <li>
+                    <span>${app.nama}</span>
+                    ${app.catatan ? `<span>${app.catatan}</span>` : '<span></span>'}
+                </li>
+            `).join('');
+
+            listItem.innerHTML = `
+                <div class="item-main-content">
+                    <div class="email-info">
+                        <strong>${item.email} ${copyButton} ${statusBadge}</strong>
+                        <ul class="app-list">
+                            ${appTags}
+                        </ul>
+                    </div>
+                    <div class="item-actions">
+                        <button class="action-btn edit-btn" onclick="bukaModalEdit(${item.id})">
+                            <i class="fas fa-pen"></i> Edit
+                        </button>
+                        <button class="action-btn delete-btn" onclick="hapusItemData(${item.id})">
+                            <i class="fas fa-trash"></i> Hapus
+                        </button>
+                    </div>
+                </div>
+                ${item.catatan ? `<div class="item-note"><strong>Catatan Global:</strong> ${item.catatan}</div>` : ''}
+            `;
+
+            dataKoleksi.appendChild(listItem);
+        });
+    }
+
+    // --- FUNGSI MENGHAPUS ITEM DATA ---
+    function hapusItemData(id) {
+        if (!confirm("Apakah Anda yakin ingin menghapus data akun ini?")) {
+            return;
+        }
+        emailData = emailData.filter(item => item.id !== id);
+        simpanKeLocalStorage();
+        renderData();
+        tampilkanNotifikasi("Berhasil Dihapus", "Akun email berhasil dihapus dari koleksi.");
+    }
+    
+    // --- FUNGSI MODAL EDIT (Perbaikan: Reset Password Strength) ---
+    function bukaModalEdit(id) {
+        const item = emailData.find(d => d.id === id);
+        if (!item) return;
+
+        document.getElementById('editId').value = item.id;
+        document.getElementById('editEmail').value = item.email;
+        document.getElementById('editNote').value = item.catatan || ''; 
+        document.getElementById('editStatus').value = item.status; 
+        
+        // Perbaikan: Reset input kata sandi dan strength meter di modal edit
+        document.getElementById('editPassword').value = ''; 
+        checkPasswordStrength('', 'editPasswordStrengthBar', 'editPasswordStrengthText');
+
+        editAppInputsContainer.innerHTML = '';
+        item.aplikasi.forEach(app => {
+            tambahInputApp('editAppInputs', app); 
+        });
+        if (item.aplikasi.length === 0) {
+             tambahInputApp('editAppInputs', { nama: '', catatan: '' });
+        }
+
+        editEmailError.style.display = 'none'; 
+        editModal.style.display = 'block';
+    }
+    
+    function tutupModal() {
+        editModal.style.display = 'none';
+    }
+
+    window.onclick = function(event) {
+        if (event.target == editModal) {
+            tutupModal();
+        } else if (event.target == customNotification) {
+            tutupNotifikasi();
+        }
+    }
+    
+    // --- FUNGSI MENYIMPAN PERUBAHAN EDIT ---
+    formEdit.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const id = parseInt(document.getElementById('editId').value);
+        
+        const emailBaru = document.getElementById('editEmail').value.trim();
+        const catatanGlobalBaru = document.getElementById('editNote').value.trim();
+        const statusBaru = document.getElementById('editStatus').value;
+
+        if (!validateEmail(emailBaru, editEmailError)) return;
+        
+        if (!validateUniqueApps('editAppInputs')) return;
+        
+        const aplikasiBaru = getAppValues('editAppInputs'); 
+
+        if (aplikasiBaru.length === 0) {
+            tutupModal(); 
+            tampilkanNotifikasi("Perhatian!", "Mohon isi minimal satu Aplikasi/Web terkait.");
+            return;
+        }
+
+        const isDuplicate = emailData.some(item => item.id !== id && item.email.toLowerCase() === emailBaru.toLowerCase());
+        if (isDuplicate) {
+            tutupModal();
+            tampilkanNotifikasi("Duplikasi Data", `Email "<strong>${emailBaru}</strong>" sudah ada dalam daftar.`);
+            return;
+        }
+
+        const index = emailData.findIndex(d => d.id === id);
+        if (index !== -1) {
+            emailData[index].email = emailBaru;
+            emailData[index].aplikasi = aplikasiBaru;
+            emailData[index].catatan = catatanGlobalBaru;
+            emailData[index].status = statusBaru;
+        }
+
+        simpanKeLocalStorage();
+        renderData();
+        tutupModal();
+        tampilkanNotifikasi("Berhasil Disimpan", "Perubahan akun berhasil disimpan.");
+    });
+    
+    // --- FUNGSI PENDUKUNG: MENGAMBIL NILAI APLIKASI + CATATAN ---
+    function getAppValues(containerId) {
+        const appContainers = document.querySelectorAll(`#${containerId} > .app-input-container`);
+        const values = [];
+
+        appContainers.forEach(container => {
+            const nameInput = container.querySelector('.app-name-input');
+            const noteInput = container.querySelector('.app-note-input');
+            
+            const appName = nameInput ? nameInput.value.trim() : '';
+            const appNote = noteInput ? noteInput.value.trim() : '';
+
+            if (appName) {
+                values.push({
+                    nama: appName,
+                    catatan: appNote
+                });
+            }
+        });
+        return values;
+    }
+
+    // --- FUNGSI PENDUKUNG: MENAMBAH INPUT APLIKASI DENGAN CATATAN ---
+    function tambahInputApp(containerId, initialData = { nama: '', catatan: '' }) {
+        const container = document.getElementById(containerId);
+        const div = document.createElement('div');
+        div.classList.add('app-input-container');
+        
+        div.innerHTML = `
+            <div class="form-group">
+                <label>Nama Aplikasi/Web</label>
+                <div class="app-input-wrapper">
+                    <input type="text" class="app-name-input" placeholder="Contoh: TikTok, YouTube" value="${initialData.nama}" list="existingAppsList" required>
+                </div>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>Catatan Aplikasi (Nickname, Server, dll.)</label>
+                <input type="text" class="app-note-input" placeholder="Contoh: Tiktok:Sigma69" value="${initialData.catatan}">
+            </div>
+            <button type="button" class="remove-app-btn" onclick="hapusInputApp(this)">
+                <i class="fas fa-trash-alt"></i> Hapus Aplikasi Ini
+            </button>
+        `;
+        container.appendChild(div);
+    }
+
+    function hapusInputApp(buttonElement) {
+        buttonElement.parentElement.remove();
+        // Memastikan minimal ada satu input di modal edit
+        const container = buttonElement.closest('.modal-content') ? document.getElementById('editAppInputs') : document.getElementById('appInputs');
+        if (container.children.length === 0) {
+             tambahInputApp(container.id);
+        }
+    }
+
+    function exportData() {
+        if (emailData.length === 0) {
+            tampilkanNotifikasi("Gagal Export", "Tidak ada data yang tersedia untuk diexport ke JSON!");
+            return;
+        }
+        const dataJson = JSON.stringify(emailData, null, 2); 
+        const blob = new Blob([dataJson], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `email_data_export_${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        tampilkanNotifikasi("Export Berhasil", `Data Anda berhasil diexport!`);
+    }
+
+    function importData(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const importedData = JSON.parse(e.target.result);
+                if (!Array.isArray(importedData)) {
+                    throw new Error("Format file JSON tidak valid. Pastikan file berisi array data.");
+                }
+                const existingEmails = new Set(emailData.map(d => d.email.toLowerCase()));
+                const newUniqueData = importedData.filter(d => 
+                    d.email && !existingEmails.has(d.email.toLowerCase())
+                );
+                
+                newUniqueData.forEach(d => {
+                    d.id = d.id || Date.now() + Math.random(); 
+                    d.status = d.status || 'Aktif';
+                    // Konversi format aplikasi lama (string array) ke format baru (object array)
+                    if (Array.isArray(d.aplikasi) && typeof d.aplikasi[0] === 'string') {
+                        d.aplikasi = d.aplikasi.map(app => ({ nama: app, catatan: '' }));
+                    } else if (!Array.isArray(d.aplikasi)) {
+                        d.aplikasi = []; 
+                    }
+                });
+
+                emailData = [...emailData, ...newUniqueData];
+                simpanKeLocalStorage();
+                renderData();
+                tampilkanNotifikasi("Import Berhasil", `<strong>${newUniqueData.length}</strong> akun berhasil diimport!`);
+            } catch (error) {
+                tampilkanNotifikasi("Import Gagal", `Gagal mengimport data: <br> ${error.message}`);
+            }
+        };
+        reader.readAsText(file);
+        event.target.value = '';
+    }
+
+    // Panggil renderData dan tambahkan satu input aplikasi default saat halaman dimuat
+    document.addEventListener('DOMContentLoaded', () => {
+        // Bug Fix: Memastikan selalu ada minimal satu input aplikasi
+        if (appInputsContainer.children.length === 0) {
+            tambahInputApp('appInputs');
+        }
+        
+        // ** SETUP FITUR BARU: TOGGLE MATA & COPY **
+        setupPasswordFeatures('passwordInput', 'togglePasswordBtn', 'copyPasswordBtn');
+        setupPasswordFeatures('editPassword', 'editTogglePasswordBtn', 'editCopyPasswordBtn');
+        
+        renderData();
+    });
+
+</script>
+
+</body>
+</html>
